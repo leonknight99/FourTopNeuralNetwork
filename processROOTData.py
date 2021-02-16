@@ -253,19 +253,27 @@ preselection = "nJet > 6"
 #         "root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTTT_TuneCP5_PSweights_13TeV-amcatnlo-pythia8_correctnPartonsInBorn/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/270000/0CE9E1B8-A913-BC41-8A20-79692A089797.root"]
 
 #files = ["root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/130000/FAC33266-D958-C046-B736-E626D0D6F058.root"]
-files = ["root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/260000/A63864C1-F698-004A-ACE2-2EC42B1A56B5.root"]  # small event
+#files = ["root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/260000/A63864C1-F698-004A-ACE2-2EC42B1A56B5.root"]  # small event
 #files = ["root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/260000/9E0DC7FB-15C3-E442-A594-AC7A3811865C.root",
 #         "root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/260000/A63864C1-F698-004A-ACE2-2EC42B1A56B5.root "]
 
-print "\nFile Name:\n", files, "\n"
+output_path = str("/eos/user/l/lknight/TopQuarkProject/test/2.9")  # Creates output directory for ROOT TTrees
 
-output_path = str("/eos/user/l/lknight/TopQuarkProject/test/2.3")
+input_file = open("FourTopEvents.txt")  # List of data files to append through
+#input_file = open("TwoTopEvents.txt")
 
-histogram_file_name = str(os.path.basename(files[0]).replace(".root", "histOutMuons.root"))
+input_lines = input_file.read().splitlines()
+files_list = ["root://cms-xrd-global.cern.ch/" + s for s in input_lines]  # Appends rest of file name information
+print '\n\n', files_list, '\nlenght: ', len(files_list)
 
-p = PostProcessor(outputDir=output_path, inputFiles=files, cut=preselection, branchsel=None,
+for file_index in range(len(files_list)):  # Iterates through files
+    if file_index == 1:
+        break
+    files = [files_list[int(file_index)]]
+    print "\nFile Name:\n", files, "\n"
+    histogram_file_name = str(os.path.basename(files[0]).replace(".root", "histOutMuons.root"))
+
+    p = PostProcessor(outputDir=output_path, inputFiles=files, cut=preselection, branchsel=None,
                   modules=[ExampleAnalysis(histogramBins, histogramMin, histogramMax, eventsMax)],
                   noOut=False, histFileName=histogram_file_name, histDirName="plots")
-p.run()
-
-
+    p.run()
