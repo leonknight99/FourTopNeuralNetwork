@@ -180,6 +180,7 @@ class ExampleAnalysis(Module):
         '''Jets'''
 
         HT = 0.0
+        n_BJets = 0
 
         for jet_i, jet in enumerate(jets):
             if jet.pt <= 30:  # Transverse momentum cut
@@ -189,6 +190,8 @@ class ExampleAnalysis(Module):
                 n_jets += 1
                 jIndex.append(jet_i)
                 eventSumJets += jet.p4()
+                if jet.btagCSVV2 > 0.8838:
+                    n_BJets += 1
             #self.h_eta.Fill(jet.p4().Eta())
             #self.h_vpt.Fill(jet.p4().Pt())
 
@@ -199,8 +202,12 @@ class ExampleAnalysis(Module):
             self.h_cut_vals.Fill(5.5)  # Not enough jets in the muon event
             return False
 
+        if n_BJets < 2:  # B Jets cut, requires at least 2 b-tagged jets at the medium working point
+            self.h_cut_vals.Fill(6.5)
+            return False
+
         if HT <= 500:  # Total scalar sum of all jets
-            self.h_cut_vals.Fill(6.5)  # Event doesn't contain enough energy
+            self.h_cut_vals.Fill(7.5)  # Event doesn't contain enough energy
             return False
 
         eventSum = eventSumMuons + eventSumElectrons + eventSumJets
@@ -243,7 +250,7 @@ class ExampleAnalysis(Module):
 histogramBins = 100
 histogramMax = 0
 histogramMin = 1000
-eventsMax = 10
+eventsMax = 40
 
 preselection = "nJet > 6"
 
@@ -257,17 +264,17 @@ preselection = "nJet > 6"
 #files = ["root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/260000/9E0DC7FB-15C3-E442-A594-AC7A3811865C.root",
 #         "root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/260000/A63864C1-F698-004A-ACE2-2EC42B1A56B5.root "]
 
-output_path = str("/eos/user/l/lknight/TopQuarkProject/test/2.9")  # Creates output directory for ROOT TTrees
+output_path = str("/eos/user/l/lknight/TopQuarkProject/test/3.1")  # Creates output directory for ROOT TTrees
 
-input_file = open("FourTopEvents.txt")  # List of data files to append through
-#input_file = open("TwoTopEvents.txt")
+#input_file = open("FourTopEvents.txt")  # List of data files to append through
+input_file = open("TwoTopEvents.txt")
 
 input_lines = input_file.read().splitlines()
 files_list = ["root://cms-xrd-global.cern.ch/" + s for s in input_lines]  # Appends rest of file name information
 print '\n\n', files_list, '\nlenght: ', len(files_list)
 
 for file_index in range(len(files_list)):  # Iterates through files
-    if file_index == 1:
+    if file_index == 40:
         break
     files = [files_list[int(file_index)]]
     print "\nFile Name:\n", files, "\n"
