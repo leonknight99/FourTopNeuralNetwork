@@ -160,16 +160,20 @@ epochs = range(1, epochs + 1)
 
 axs[0].plot(epochs, loss_values, 'bo', label='Training loss')
 axs[0].plot(epochs, val_loss_values, 'b', label='Validation loss')
-axs[0].title.set_text(f'Training and validation loss for {epoch_n_val} epochs')
+axs[0].title.set_text(f'Training and validation loss')
 #axs[0].xlabel.set_text('Epochs')
 #axs[0].ylabel.set_text('Loss')
 axs[0].legend()
 
 axs[1].plot(epochs, accuracy_values, 'bo', label='Training acc')
 axs[1].plot(epochs, val_accuracy_values, 'b', label='Validation acc')
-axs[1].title.set_text(f'Training and validation accuracy for {epoch_n_val} epochs')
+axs[1].title.set_text(f'Training and validation accuracy')
 #axs[1].xlabel.set_text('Epochs')
 #axs[1].ylabel.set_text('Loss')
 axs[1].legend()
 
-
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.savefig(f'TFlow Plots Epoch Variation.png')
+plt.show()
+plt.clf()
