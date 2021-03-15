@@ -21,6 +21,7 @@ def data_to_graph(inputDir, outputDir, type, exampleGraph=False):
     os.chdir(files_path)
     print(inputFiles_list)
     t0 = time.time()  # Timing of process
+    g_err = 0  # Graphs with edge errors
     nF = len(inputFiles_list)
     nFx = 1
 
@@ -109,16 +110,23 @@ def data_to_graph(inputDir, outputDir, type, exampleGraph=False):
             graph_node_dict = nx.get_node_attributes(G, 'properties')
             node_features_array = np.array(list(graph_node_dict.values()))  # For node features
 
-            edge_triu = np.triu(nx.attr_sparse_matrix(G, edge_attr='d', rc_order=G.nodes).todense())
+            edge_triu = np.array(nx.attr_sparse_matrix(G, edge_attr='d', rc_order=G.nodes).todense())
             edge_list = edge_triu.ravel()
             edge_list = edge_list[edge_list != 0]  # For edge features
 
             a = nx.convert_matrix.to_numpy_matrix(G)
             x = np.array(node_features_array)
             e = np.array([edge_list]).T
-            #  e = nx.attr_sparse_matrix(G, edge_attr='d', rc_order=G.nodes)
+            #print(e)
+            #e1 = nx.attr_sparse_matrix(G, edge_attr='d', rc_order=G.nodes)
+            #print(e1)
             #  E = e.todense() # To turn back into an adjacency matrix for edge values
             y = G.graph.get('event')
+
+            if np.count_nonzero(a) != e.shape[0]:
+                #print('Graph Error\n', edge_features_matrix)
+                g_err += 1
+                continue
 
             a_list.append(a)
             x_list.append(x)
@@ -144,7 +152,8 @@ def data_to_graph(inputDir, outputDir, type, exampleGraph=False):
 
     filename = os.path.join(final_directory, f'{type} graphs')
     np.savez(filename, x_list=x_list, a_list=a_list, e_list=e_list, y_list=y_list)
-    print(f'Saved to file: {filename} | Total Time: {round(time.time() - t0, 5)}s | Total Events: {len(y_list)}')
+    print(f'Saved to file: {filename} | Total Time: {round(time.time() - t0, 5)}s | Total Events: {len(y_list)} '
+          f'| Graph Errors: {g_err}')
 
 
 output_directory = 'root2networkOut'

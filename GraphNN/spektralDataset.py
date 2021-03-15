@@ -43,6 +43,7 @@ class TopDataset(Dataset):
             x = x_list[i]
 
             # Adjacency matrix
+            #a = sp.csr_matrix(np.triu(a_list[i]))
             a = sp.csr_matrix(a_list[i])
 
             # Edge features
@@ -51,12 +52,27 @@ class TopDataset(Dataset):
             # Labels
             y = y_list[i]
 
+            if int(a.nnz) != int(e.shape[0]):
+                print(i, a.nnz, e.shape[0])
+                print(a_list[i], e_list[i])
+
             return Graph(x=x, a=a, e=e, y=y)
 
         # We must return a list of Graph objects
         return [make_graph(n) for n in range(n_samples)]
 
+'''
+file = ['root2networkOut/0 graphs.npz']#, 'root2networkOut/1 graphs.npz']
+dataset = TopDataset(max_samples=0, file_name_list=file)
+print(dataset)
 
-#file = 'root2networkOut/0 graphs.npz'
-#dataset = TopDataset(max_samples=0, file_name=file, transforms=NormalizeAdj())
-#print(dataset)
+for n in [0, 1]:#, 10, 15]:
+    print(dataset[n])
+    print(dataset[n].a)
+    print(dataset[n].x)
+    print(dataset[n].e)
+    print(dataset[n].y)
+    print(dataset[n].a.shape, dataset[n].a.nnz)
+    print(dataset[n].x.shape)
+    print(dataset[n].e.shape)
+'''
