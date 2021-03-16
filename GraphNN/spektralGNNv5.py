@@ -107,7 +107,7 @@ def evaluate(loader):
 
 
 print("Fitting model")
-current_batch = epoch = model_loss = model_acc = 0
+current_batch = epoch = model_loss = model_acc = best_val_epoch = 0
 best_val_loss = np.inf
 best_weights = None
 patience = es_patience
@@ -136,6 +136,7 @@ for batch in loader_tr:
         # Check if loss improved for early stopping
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            best_val_loss = epoch
             patience = es_patience
             print("New best val_loss {:.3f}".format(val_loss))
             best_weights = model.get_weights()
@@ -164,15 +165,17 @@ fig, axs = plt.subplots(1, 2, figsize=(10, 5))
 
 epoch_list = range(1, epoch + 1)
 
-axs[0].plot(epoch_list, np.log(loss_values), 'o', label='Training loss')
+axs[0].plot(epoch_list, np.log(loss_values), 'c', label='Training loss')
 axs[0].plot(epoch_list, np.log(val_loss_values), 'b', label='Validation loss')
+axs[0].axvline(x=best_val_epoch, label='Best validation loss epoch', c='r')
 axs[0].title.set_text(f'Training and validation loss - log')
 #axs[0].xlabel.set_text('Epochs')
 #axs[0].ylabel.set_text('Loss')
 axs[0].legend()
 
-axs[1].plot(epoch_list, accuracy_values, 'o', label='Training acc')
+axs[1].plot(epoch_list, accuracy_values, 'c', label='Training acc')
 axs[1].plot(epoch_list, val_accuracy_values, 'b', label='Validation acc')
+axs[1].axvline(x=best_val_epoch, label='Best validation loss epoch', c='r')
 axs[1].title.set_text(f'Training and validation accuracy')
 #axs[1].xlabel.set_text('Epochs')
 #axs[1].ylabel.set_text('Loss')
