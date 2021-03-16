@@ -22,7 +22,7 @@ np.set_printoptions(linewidth=200)
 ################################################################################
 
 learning_rate = 1e-3  # Learning rate
-epochs = 100  # Number of training epochs
+epochs = 2  # Number of training epochs
 batch_size = 32  # Batch size
 es_patience = 10  # Patience for early stopping
 t0 = time.time()
@@ -78,6 +78,9 @@ model.summary()
 ################################################################################
 # FIT MODEL
 ################################################################################
+
+loss_values, val_loss_values, accuracy_values, val_accuracy_values = [], [], [], []
+
 #@tf.function(input_signature=loader_tr.tf_signature(), experimental_relax_shapes=True)
 def train_step(inputs, target):
     with tf.GradientTape() as tape:
@@ -124,6 +127,11 @@ for batch in loader_tr:
         print("Ep. {} - Loss: {:.2f} - Acc: {:.2f} - Val loss: {:.2f} - Val acc: {:.2f}"
               .format(epoch, model_loss, model_acc, val_loss, val_acc))
 
+        val_loss_values.append(val_loss)
+        val_accuracy_values.append(val_acc)
+        loss_values.append(model_loss)
+        accuracy_values.append(model_acc)
+
         # Check if loss improved for early stopping
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -139,6 +147,10 @@ for batch in loader_tr:
         model_acc = 0
         current_batch = 0
 
+#history = model.history.history()
+history = tf.keras.callbacks.History().history
+print(history)
+
 ################################################################################
 # EVALUATE MODEL
 ################################################################################
@@ -147,14 +159,7 @@ model.set_weights(best_weights)  # Load best model
 test_loss, test_acc = evaluate(loader_te)
 print("Done. Test loss: {:.4f}. Test acc: {:.2f}".format(test_loss, test_acc))
 
-history = model.history.history
-
-loss_values = history['loss']
-val_loss_values = history['val_loss']
-accuracy_values = history['accuracy']
-val_accuracy_values = history['val_accuracy']
-
-fig, axs = plt.subplots(1, 2, figsize=(10,10))
+fig, axs = plt.subplots(1, 2, figsize=(10, 5))
 
 epochs = range(1, epochs + 1)
 
