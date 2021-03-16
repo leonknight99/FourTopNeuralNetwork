@@ -136,7 +136,7 @@ for batch in loader_tr:
         # Check if loss improved for early stopping
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_val_loss = epoch
+            best_val_epoch = epoch
             patience = es_patience
             print("New best val_loss {:.3f}".format(val_loss))
             best_weights = model.get_weights()
