@@ -161,17 +161,17 @@ print("Done. Test loss: {:.4f}. Test acc: {:.2f}".format(test_loss, test_acc))
 
 fig, axs = plt.subplots(1, 2, figsize=(10, 5))
 
-epochs = range(1, epochs + 1)
+epoch_list = range(1, epoch + 1)
 
-axs[0].plot(epochs, loss_values, 'bo', label='Training loss')
-axs[0].plot(epochs, val_loss_values, 'b', label='Validation loss')
+axs[0].plot(epoch_list, loss_values, 'bo', label='Training loss')
+axs[0].plot(epoch_list, val_loss_values, 'b', label='Validation loss')
 axs[0].title.set_text(f'Training and validation loss')
 #axs[0].xlabel.set_text('Epochs')
 #axs[0].ylabel.set_text('Loss')
 axs[0].legend()
 
-axs[1].plot(epochs, accuracy_values, 'bo', label='Training acc')
-axs[1].plot(epochs, val_accuracy_values, 'b', label='Validation acc')
+axs[1].plot(epoch_list, accuracy_values, 'bo', label='Training acc')
+axs[1].plot(epoch_list, val_accuracy_values, 'b', label='Validation acc')
 axs[1].title.set_text(f'Training and validation accuracy')
 #axs[1].xlabel.set_text('Epochs')
 #axs[1].ylabel.set_text('Loss')
@@ -182,3 +182,5 @@ plt.ylabel('Loss')
 plt.savefig(f'TFlow Plots Epoch Variation.png')
 plt.show()
 plt.clf()
+
+print(f'Finished GNN: \nTime taken: {round(time.time() - t0, 5)}s')
