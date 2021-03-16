@@ -25,6 +25,7 @@ learning_rate = 1e-3  # Learning rate
 epochs = 2  # Number of training epochs
 batch_size = 32  # Batch size
 es_patience = 10  # Patience for early stopping
+samples = 16384  # Number of graphs to add to the dataset
 t0 = time.time()
 
 ################################################################################
@@ -32,7 +33,7 @@ t0 = time.time()
 ################################################################################
 
 file = ['root2networkOut/0 graphs.npz', 'root2networkOut/1 graphs.npz']
-dataset = spektralDataset.TopDataset(max_samples=16384, file_name_list=file)
+dataset = spektralDataset.TopDataset(max_samples=samples, file_name_list=file)
 
 print(f'Time taken: {round(time.time() - t0, 5)}s | Data opened')
 
@@ -163,14 +164,14 @@ fig, axs = plt.subplots(1, 2, figsize=(10, 5))
 
 epoch_list = range(1, epoch + 1)
 
-axs[0].plot(epoch_list, loss_values, 'bo', label='Training loss')
-axs[0].plot(epoch_list, val_loss_values, 'b', label='Validation loss')
-axs[0].title.set_text(f'Training and validation loss')
+axs[0].plot(epoch_list, np.log(loss_values), 'o', label='Training loss')
+axs[0].plot(epoch_list, np.log(val_loss_values), 'b', label='Validation loss')
+axs[0].title.set_text(f'Training and validation loss - log')
 #axs[0].xlabel.set_text('Epochs')
 #axs[0].ylabel.set_text('Loss')
 axs[0].legend()
 
-axs[1].plot(epoch_list, accuracy_values, 'bo', label='Training acc')
+axs[1].plot(epoch_list, accuracy_values, 'o', label='Training acc')
 axs[1].plot(epoch_list, val_accuracy_values, 'b', label='Validation acc')
 axs[1].title.set_text(f'Training and validation accuracy')
 #axs[1].xlabel.set_text('Epochs')
