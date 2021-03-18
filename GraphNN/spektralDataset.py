@@ -22,18 +22,18 @@ class TopDataset(Dataset):
         x_listi, a_listi, e_listi, y_listi = [], [], [], []
 
         for file_name in self.file_name_list:
-            data = np.load(file_name, allow_pickle=True)
+            data = np.load(file_name, allow_pickle=True)  # Opens files
             x_listi.append(data['x_list'])
-            a_listi.append(data['a_list'])
+            a_listi.append(data['a_list'])  # Appends each graph feature to its own feature list
             e_listi.append(data['e_list'])
             y_listi.append(data['y_list'])
         x_list = np.concatenate(x_listi)
-        a_list = np.concatenate(a_listi)
+        a_list = np.concatenate(a_listi)  # Joins all the lists together
         e_list = np.concatenate(e_listi)
         y_list = np.concatenate(y_listi)
 
         if self.max_samples != 0:
-            n_samples = self.max_samples
+            n_samples = self.max_samples  # How many graphs are then outputted
         else:
             n_samples = len(y_list)
 
@@ -43,16 +43,15 @@ class TopDataset(Dataset):
             x = x_list[i]
 
             # Adjacency matrix
-            #a = sp.csr_matrix(np.triu(a_list[i]))
             a = sp.csr_matrix(a_list[i])
 
             # Edge features
             e = e_list[i]
 
             # Labels
-            y = y_list[i]
+            y = np.array([y_list[i]])
 
-            if int(a.nnz) != int(e.shape[0]):
+            if int(a.nnz) != int(e.shape[0]):  # Check edge features and adjacency matrix are of the same order
                 print(i, a.nnz, e.shape[0])
                 print(a_list[i], e_list[i])
 
