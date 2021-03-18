@@ -8,6 +8,7 @@ from importlib import import_module
 from PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor import PostProcessor
 from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection, Event, Object
 from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
+from PhysicsTools.NanoAODTools.postprocessing.tools import deltaR
 
 # https://github.com/cms-nanoAOD/nanoAOD-tools/blob/master/python/postprocessing/modules/common/collectionMerger.py
 # said to do it
@@ -124,6 +125,7 @@ class ExampleAnalysis(Module):
         eIndex = []  # Electron collection
         mIndex = []  # Muon collection
         jIndex = []  # Jet collection
+        crosslinkJetIndex = []  # For removal of jets associated to electrons and muons
         n_0leptons = 0  # If no leptons are present
         n_leptons = 0  # Selected lepton count
         n_muons = 0  # Selected muon count
@@ -157,6 +159,7 @@ class ExampleAnalysis(Module):
                 n_muons += 1
                 n_leptons += 1
                 mIndex.append(m)
+                crosslinkJetIndex.append(muon.jetIdx)
                 eventSumMuons += muon.p4()
 
         '''Electron collection'''
@@ -169,6 +172,7 @@ class ExampleAnalysis(Module):
             n_electrons += 1
             n_leptons += 1
             eIndex.append(e)
+            crosslinkJetIndex.append(electron.jetIdx)
             eventSumElectrons += electron.p4()
 
         '''Single lepton selection cuts'''
@@ -183,17 +187,30 @@ class ExampleAnalysis(Module):
         n_BJets = 0
 
         for jet_i, jet in enumerate(jets):
-            if jet.pt <= 30:  # Transverse momentum cut
+            if jet.pt <= 30:  # Transverse momentum cut per jet
                 continue
-            if abs(jet.eta) < 2.5:  # Pseudorapidity cut
-                HT += jet.pt
-                n_jets += 1
-                jIndex.append(jet_i)
-                eventSumJets += jet.p4()
-                if jet.btagCSVV2 > 0.8838:
-                    n_BJets += 1
-            #self.h_eta.Fill(jet.p4().Eta())
-            #self.h_vpt.Fill(jet.p4().Pt())
+
+            if abs(jet.eta) >= 2.5:  # Pseudorapidity cut per jet
+                continue
+
+            failedCleaning = False  # Jet cleaning per jet - making sure the jet isn't actually an electron or muon
+            for m in mIndex:
+                if deltaR(muons[m], jet) < 0.4:
+                    #print deltaR(muons[m], jet)
+                    failedCleaning = True
+            for e in eIndex:
+                if deltaR(electrons[e], jet) < 0.4:
+                    #print deltaR(electrons[e], jet)
+                    failedCleaning = True
+            if failedCleaning:
+                continue
+
+            HT += jet.pt  # Summing the momentum for the jets in the event
+            n_jets += 1
+            jIndex.append(jet_i)
+            eventSumJets += jet.p4()
+            if jet.btagCSVV2 > 0.8838:  # Assigning b-tagged jets to the event
+                n_BJets += 1
 
         if n_electrons == 1 and n_jets < 8:
             self.h_cut_vals.Fill(4.5)  # Not enough jets in the electron event
@@ -243,7 +260,6 @@ class ExampleAnalysis(Module):
             for elem in range(len(fatjets)):
                 out.append(getattr(fatjets[elem], br))
             self.out.fillBranch("%s_%s"%(self.output["typeAK8"], br), out)
-        #print 'done'
         return True
 
 
@@ -264,7 +280,7 @@ preselection = "nJet > 6"
 #files = ["root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/260000/9E0DC7FB-15C3-E442-A594-AC7A3811865C.root",
 #         "root://cms-xrd-global.cern.ch//store/mc/RunIIFall17NanoAODv7/TTJets_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/PU2017_12Apr2018_Nano02Apr2020_102X_mc2017_realistic_v8-v1/260000/A63864C1-F698-004A-ACE2-2EC42B1A56B5.root "]
 
-output_path = str("/eos/user/l/lknight/TopQuarkProject/test/3.1")  # Creates output directory for ROOT TTrees
+output_path = str("/eos/user/l/lknight/TopQuarkProject/data_cleaned/TT")  # Creates output directory for ROOT TTrees
 
 #input_file = open("FourTopEvents.txt")  # List of data files to append through
 input_file = open("TwoTopEvents.txt")
@@ -273,9 +289,9 @@ input_lines = input_file.read().splitlines()
 files_list = ["root://cms-xrd-global.cern.ch/" + s for s in input_lines]  # Appends rest of file name information
 print '\n\n', files_list, '\nlenght: ', len(files_list)
 
-for file_index in range(len(files_list)):  # Iterates through files
-    if file_index == 40:
-        break
+for file_index in range(27, len(files_list)):  # Iterates through files
+    #if file_index == 40:
+     #   break
     files = [files_list[int(file_index)]]
     print "\nFile Name:\n", files, "\n"
     histogram_file_name = str(os.path.basename(files[0]).replace(".root", "histOutMuons.root"))
