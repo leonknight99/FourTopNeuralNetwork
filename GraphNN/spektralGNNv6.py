@@ -2,7 +2,9 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import time
+
 import spektralDataset
+from Layers import MessagePassing
 
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.losses import MeanSquaredError, BinaryCrossentropy
@@ -13,7 +15,7 @@ from tensorflow.keras.optimizers import Adam
 from spektral.data import DisjointLoader, BatchLoader
 from spektral.transforms import NormalizeAdj
 from spektral.datasets import QM9
-from spektral.layers import ECCConv, GlobalAvgPool, MessagePassing, GCSConv, TopKPool
+from spektral.layers import GlobalAvgPool, ECCConv
 
 np.set_printoptions(linewidth=200)
 
@@ -22,10 +24,11 @@ np.set_printoptions(linewidth=200)
 ################################################################################
 
 learning_rate = 1e-3  # Learning rate
-epochs = 2  # Number of training epochs
+epochs = 200  # Number of training epochs
 batch_size = 32  # Batch size
 es_patience = 10  # Patience for early stopping
 samples = 16384  # Number of graphs to add to the dataset
+channels = 256
 t0 = time.time()
 
 ################################################################################
@@ -64,18 +67,11 @@ A_in = Input(shape=(None,), sparse=True, name="A_in")
 E_in = Input(shape=(None,S), name="E_in")
 I_in = Input(shape=(), name="segment_ids_in", dtype=tf.int32)
 
-#X_1 = ([X_in, A_in, E_in])
-#X_2 = ([X_1, A_in, E_in])
-#X_3 = GlobalAvgPool()([X_2, I_in])
-#output = Dense(n_out, activation='s')(X_3)
-
-X_1 = ECCConv(32, activation="relu")([X_in, A_in, E_in])
-X_1, A_1, I_1 = TopKPool(ratio=0.5)([X_1, A_in, I_in])
-X_2 = ECCConv(32, activation="relu")([X_1, A_in, E_in])
-X_2, A_2, I_2 = TopKPool(ratio=0.5)([X_2, A_1, I_1])
-X_3 = ECCConv(32, activation="relu")([X_2, A_in, E_in])
-X_3 = GlobalAvgPool()([X_3, I_2])
-output = Dense(n_out, activation="softmax")(X_3)
+X_1 = ECCConv(channels, activation='relu')([X_in, A_in, E_in])  # MessagePassing.MPL()
+X_2 = ECCConv(channels, activation='relu')([X_1, A_in, E_in])
+X_3 = ECCConv(channels, activation='relu')([X_1, A_in, E_in])
+X_4 = GlobalAvgPool()([X_3, I_in])
+output = Dense(n_out, activation='sigmoid')(X_4)
 
 # Build model
 model = Model(inputs=[X_in, A_in, E_in, I_in], outputs=output)
@@ -90,7 +86,7 @@ model.summary()
 
 loss_values, val_loss_values, accuracy_values, val_accuracy_values = [], [], [], []
 
-#@tf.function(input_signature=loader_tr.tf_signature(), experimental_relax_shapes=True)
+@tf.function(input_signature=loader_tr.tf_signature(), experimental_relax_shapes=True)
 def train_step(inputs, target):
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
@@ -197,20 +193,16 @@ axs[0].plot(epoch_list, np.log(loss_values), 'c', label='Training loss')
 axs[0].plot(epoch_list, np.log(val_loss_values), 'b', label='Validation loss')
 axs[0].axvline(x=best_val_epoch, label='Best validation loss epoch', c='r')
 axs[0].title.set_text(f'Training and validation loss - log')
-axs[0].xlabel.set_text('Epochs')
-axs[0].ylabel.set_text('Loss')
 axs[0].legend()
 
 axs[1].plot(epoch_list, accuracy_values, 'c', label='Training accuracy')
 axs[1].plot(epoch_list, val_accuracy_values, 'b', label='Validation accuracy')
 axs[1].axvline(x=best_val_epoch, label='Best validation loss epoch', c='r')
 axs[1].title.set_text(f'Training and validation accuracy')
-axs[1].xlabel.set_text('Epochs')
-axs[1].ylabel.set_text('Loss')
 axs[1].legend()
 
-#plt.xlabel('Epochs')
-#plt.ylabel('Loss')
+for ax in axs.flat:
+    ax.set(xlabel='Epochs', ylabel='Loss')
 plt.savefig(f'TFlow Plots Epoch Variation.png')
 plt.show()
 plt.clf()
