@@ -8,9 +8,9 @@ import spektralDataset
 from Layers import MessagePassing
 
 from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.losses import MeanSquaredError, BinaryCrossentropy
+from tensorflow.keras.losses import MeanSquaredError, BinaryCrossentropy, CategoricalCrossentropy
 from tensorflow.keras.models import Model
-from tensorflow.keras.metrics import categorical_accuracy
+from tensorflow.keras.metrics import categorical_accuracy, binary_accuracy, BinaryAccuracy
 from tensorflow.keras.optimizers import Adam
 
 from spektral.data import DisjointLoader, BatchLoader
@@ -95,7 +95,7 @@ def train_step(inputs, target):
         loss += sum(model.losses)
     gradients = tape.gradient(loss, model.trainable_variables)
     opt.apply_gradients(zip(gradients, model.trainable_variables))
-    acc = tf.reduce_mean(categorical_accuracy(target, predictions))
+    acc = tf.reduce_mean(binary_accuracy(tf.one_hot(target, 1), predictions))
     return loss, acc
 
 
@@ -107,6 +107,7 @@ def test_step(loader):
         inputs, target = loader.__next__()
         predictions = model(inputs, training=False)
         targets = tf.cast(target, tf.float32)
+
         prediction_list.append(predictions)
         target_list.append(targets)
 
@@ -122,7 +123,7 @@ def evaluate(loader):
         step += 1
         inputs, target = loader.__next__()
         pred = model(inputs, training=False)
-        outs = (loss_fn(target, pred), tf.reduce_mean(categorical_accuracy(target, pred)),)
+        outs = (loss_fn(target, pred), tf.reduce_mean(binary_accuracy(tf.one_hot(target, 1), pred)),)
         output_l.append(outs)
     return np.mean(output_l, 0)
 
@@ -204,7 +205,6 @@ np.savez(filename_predictions, predictions=predictions, targets=targets)  # Pred
 
 filename_model = os.path.join(final_directory, f'{t0}GNNmodel.txt')
 text_file = open(filename_model, 'w')
-text_file.write(str(model.summary()))
 text_file.write(f'\n\nLearning Rate: {learning_rate} | Epochs: {epochs} | Batch Size: {batch_size} | '
                 f'Early Stopping Patience: {es_patience} | Samples: {samples} \n\nTesting\nEpoch: {best_val_epoch} | '
                 f'Test Loss: {test_loss} | Test Accuracy: {test_acc}')  # Details about the model
