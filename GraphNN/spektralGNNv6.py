@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import time
+import pickle
 
 import spektralDataset
 from Layers import MessagePassing
@@ -25,9 +26,9 @@ np.set_printoptions(linewidth=200)
 ################################################################################
 
 learning_rate = 1e-3  # Learning rate
-epochs = 200  # Number of training epochs
+epochs = 2000  # Number of training epochs
 batch_size = 32  # Batch size
-es_patience = 10  # Patience for early stopping
+es_patience = 20  # Patience for early stopping
 samples = 18000  # Number of graphs to add to the dataset
 t0 = time.time()
 
@@ -67,7 +68,7 @@ A_in = Input(shape=(None,), sparse=True, name="A_in")
 E_in = Input(shape=(None,S), name="E_in")
 I_in = Input(shape=(), name="segment_ids_in", dtype=tf.int32)
 
-X_1 = MessagePassing.TopQuarkMP(aggregate='sum')([X_in, A_in, E_in])  # ECCConv(channels, activation='relu') MessagePassing(aggregate="mean")
+X_1 = MessagePassing.TopQuarkMP(aggregate='sum')([X_in, A_in, E_in])  # ECCConv(channels, activation='relu') MessagePassing.TopQuarkMP(aggregate='sum')
 X_2 = MessagePassing.TopQuarkMP(aggregate='sum')([X_1, A_in, E_in])
 X_3 = MessagePassing.TopQuarkMP(aggregate='sum')([X_2, A_in, E_in])
 X_4 = GlobalAvgPool()([X_3, I_in])
@@ -78,7 +79,14 @@ model = Model(inputs=[X_in, A_in, E_in, I_in], outputs=output)
 opt = Adam(lr=learning_rate)
 loss_fn = BinaryCrossentropy()
 
+# Saving the model summary for later use
 model.summary()
+current_directory = os.getcwd()
+final_directory = os.path.join(current_directory, 'GNNout')
+filename_model = os.path.join(final_directory, f'{t0}GNNmodel.txt')
+text_file_model = open(filename_model, 'wt')
+text_file_model.write(str(model.summary()))
+text_file_model.close()
 
 ################################################################################
 # FIT MODEL
@@ -197,18 +205,16 @@ plt.title('The distribution of prediction between \n 0 for background and 1 for 
 plt.show()
 
 # Saving for later processing
-current_directory = os.getcwd()
-final_directory = os.path.join(current_directory, 'GNNout')
 
 filename_predictions = os.path.join(final_directory, f'{t0}Predictions')
 np.savez(filename_predictions, predictions=predictions, targets=targets)  # Predictions and targets
 
-filename_model = os.path.join(final_directory, f'{t0}GNNmodel.txt')
-text_file = open(filename_model, 'w')
-text_file.write(f'\n\nLearning Rate: {learning_rate} | Epochs: {epochs} | Batch Size: {batch_size} | '
-                f'Early Stopping Patience: {es_patience} | Samples: {samples} \n\nTesting\nEpoch: {best_val_epoch} | '
-                f'Test Loss: {test_loss} | Test Accuracy: {test_acc}')  # Details about the model
-text_file.close()
+filename_dictionary = os.path.join(final_directory, f'{t0}GNNdictionary.pkl')
+dictionary = {"Learning Rate": learning_rate, "Epochs": epochs, "Batch Size": batch_size,
+              "Early Stopping Patience": es_patience, 'Samples': samples, "Best Value Epoch": best_val_epoch,
+              "Test Loss": test_loss, "Test Accuracy": test_acc, "t0": t0}  # Details about the model
+with open(filename_dictionary, 'wb') as text_file_dict:
+    pickle.dump(dictionary, text_file_dict, protocol=0)
 
 filename_training = os.path.join(final_directory, f'{t0}Training')
 np.savez(filename_training, loss_values=loss_values, val_loss_values=val_loss_values,
