@@ -2,6 +2,8 @@ import os
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import scikitplot
+import sklearn
 
 np.set_printoptions(linewidth=200)
 
@@ -21,6 +23,10 @@ def file_list():
 
 
 def plot_history(loss_values, val_loss_values, accuracy_values, val_accuracy_values, best_val_epoch, data_number):
+
+    # Plots the training history of the GNN with a plot of the loss and accuracy for both the training and validation
+    # datasets
+
     fig, axs = plt.subplots(1, 2, figsize=(10, 5))
 
     epoch_list = range(1, len(loss_values) + 1)
@@ -45,18 +51,80 @@ def plot_history(loss_values, val_loss_values, accuracy_values, val_accuracy_val
 
 
 def plot_sig_back_hist(predictions, targets, data_number):
+
+    #  Plot a stacked histogram of how the signal and background has been classified by the GNN
+
     signal = np.where(targets == 1)[1]
     background = np.where(targets == 0)[1]
-    signal_predictions = np.take(predictions, signal)
-    background_predictions = np.take(predictions, background)
+    signal_predictions = np.take(predictions, signal)  # List of probabilities that the GNN classed the event as signal
+    background_predictions = np.take(predictions, background)  # List of prob for background
 
-    plt.hist([signal_predictions, background_predictions], bins=100, stacked=True, label=['signal', 'background'])
+    plt.hist([signal_predictions, background_predictions], bins=100, stacked=True, label=['Signal', 'Background'])
     plt.legend()
     plt.xlabel('Prediction Value')
     plt.ylabel('N')
     plt.title('The distribution of prediction between \n 0 for background and 1 for signal')
 
     plt.savefig(f'{directory}/{data_number}sig_back_histogram.png', dpi=600)
+    plt.clf()
+
+
+def plot_sig_back_cumulative(predictions, targets, data_number):
+
+    # Plot a cumulative plot of the classification of signal and background events compared to probability
+
+    signal = np.where(targets == 1)[1]
+    background = np.where(targets == 0)[1]
+    signal_predictions = np.take(predictions, signal)  # List of probabilities that the GNN classed the event as signal
+    background_predictions = np.take(predictions, background)  # List of prob for background
+
+    signal_cumulative = np.cumsum(signal_predictions)
+    background_cumulative = np.cumsum(background_predictions)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    n, bins, patches = ax.hist(signal_predictions, bins=100, density=True, histtype='step', cumulative=True, label='Signal')
+    patches[0].set_xy(patches[0].get_xy()[:-1])
+    n, bins, patches = ax.hist(background_predictions, bins=bins, density=True, histtype='step', cumulative=-1, label='Background' )
+    patches[0].set_xy(patches[0].get_xy()[1:])
+
+    ax.legend()
+    ax.set_xlabel('Probability events are classed as signal')
+    ax.set_ylabel('Cumulative sum of events')
+
+    plt.savefig(f'{directory}/{data_number}sig_back_cumulative.png', dpi=600)
+    plt.clf()
+
+
+def plot_sig_sqrt_back(predictions, targets, data_number):
+
+    # Plot of how the s/sqrt(b) changes when the prediction cut changes
+
+    cuts = np.linspace(0, 1, 1001)
+    sb_list = []
+
+    for cut in cuts:
+        combined = np.vstack((predictions, targets)).T
+        combined = combined[combined[:, 0] > cut]
+        n_signal = np.count_nonzero(combined[:, 1] == 1)
+        n_background = np.count_nonzero(combined[:, 1] == 0)
+        sig = n_signal / np.sqrt(n_background)
+        sb_list.append(sig)
+    plt.plot(cuts, sb_list)
+
+    plt.savefig(f'{directory}/{data_number}sig_sqrt_back.png', dpi=600)
+    plt.clf()
+
+
+def plot_roc_curve(predictions, targets, data_number):
+    print(type(np.asarray(predictions)))
+    print(type(np.asarray(targets)))
+    fpr, tpr, thresholds = sklearn.metrics.roc_curve(targets, predictions)
+    print(fpr)
+    print(tpr)
+    print(thresholds)
+    scikitplot.metrics.plot_roc(targets, predictions)
+    plt.savefig(f'{directory}/{data_number}roc_curve.png', dpi=600)
     plt.clf()
 
 files = file_list()
@@ -76,4 +144,6 @@ for j in range(files.shape[0]):
     plot_history(loss_values, val_loss_values, accuracy_values, val_accuracy_values,
                  int(data_info['Best Value Epoch']), data_info['t0'])
     plot_sig_back_hist(predictions, targets, data_info['t0'])
-
+    plot_sig_back_cumulative(predictions, targets, data_info['t0'])
+    #plot_roc_curve(predictions, targets, data_info['t0'])
+    plot_sig_sqrt_back(predictions, targets, data_info['t0'])
