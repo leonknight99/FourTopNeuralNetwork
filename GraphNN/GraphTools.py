@@ -15,12 +15,13 @@ def file_list():
     # List of input GNN attempts, removing unwanted files from the list such as: previous image outputs and MacOS file
 
     input_files = sorted(os.listdir(directory))
-    input_files = [x for x in input_files if '.png' not in x]
+    input_files = [x for x in input_files if '.png' not in x]  # Removes previous outputted images
+    input_files = [x for x in input_files if '.txt' not in x]  # Removes txt files used for GNN properties
     try:
         input_files.remove('.DS_Store')
     except ValueError:
         pass
-    input_files = np.array(input_files).reshape((-1, 4))
+    input_files = np.array(input_files).reshape((-1, 3))
     print(input_files)
     return input_files
 
@@ -52,6 +53,21 @@ def plot_history(loss_values, val_loss_values, accuracy_values, val_accuracy_val
 
     plt.savefig(f'{directory}/{data_number}training_history.png', dpi=600)
     plt.clf()
+    plt.close()
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    ax.plot(epoch_list, np.log(loss_values), 'c', label='Training data loss')
+    ax.plot(epoch_list, np.log(val_loss_values), 'b', label='Validation data loss')
+    ax.axvline(x=best_val_epoch, label='Best epoch', c='r')
+    ax.minorticks_on()
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel(r'$\ln({loss})$')
+    plt.legend()
+
+    plt.savefig(f'{directory}/{data_number}loss_history.png', dpi=600)
+    plt.clf()
+    plt.close()
 
 
 def plot_sig_back_hist(predictions, targets, data_number):
@@ -71,6 +87,7 @@ def plot_sig_back_hist(predictions, targets, data_number):
 
     plt.savefig(f'{directory}/{data_number}sig_back_histogram.png', dpi=600)
     plt.clf()
+    plt.close()
 
 
 def plot_sig_back_cumulative(predictions, targets, data_number):
@@ -98,6 +115,7 @@ def plot_sig_back_cumulative(predictions, targets, data_number):
 
     plt.savefig(f'{directory}/{data_number}sig_back_cumulative.png', dpi=600)
     plt.clf()
+    plt.close()
 
 
 def plot_sig_sqrt_back(predictions, targets, data_number):
@@ -123,6 +141,7 @@ def plot_sig_sqrt_back(predictions, targets, data_number):
 
     plt.savefig(f'{directory}/{data_number}sig_sqrt_back.png', dpi=600)
     plt.clf()
+    plt.close()
 
 
 def plot_roc_curve_plt(predictions, targets, data_number):
@@ -154,6 +173,7 @@ def plot_roc_curve_plt(predictions, targets, data_number):
     plt.ylabel('True Positive Rate')
     plt.savefig(f'{directory}/{data_number}roc_curve_plt.png', dpi=600)
     plt.clf()
+    plt.close()
 
 
 def plot_roc_curve_skl(predictions, targets, data_number):
@@ -176,26 +196,108 @@ def plot_roc_curve_skl(predictions, targets, data_number):
     plt.legend()
     plt.savefig(f'{directory}/{data_number}roc_curve_skl.png', dpi=600)
     plt.clf()
+    plt.close()
 
 
+def plot_roc_auc_epoch_variation(predict_list, targ_list, epoch_list, best_epoch_list):
+
+    # SMPL combining roc curves for a variety of epoch training values
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.set_aspect('equal')
+
+    x = np.linspace(0, 1, 100)
+
+    for n in range(len(predict_list)):
+        predictions = predict_list[n]
+        targets = targ_list[n]
+        epoch = epoch_list[n]
+        best_epoch = best_epoch_list[n]
+
+        if epoch == 2000:
+            epoch = best_epoch
+
+        true_values = targets[0].astype(int)
+        probabilities = predictions[0].astype(float)
+
+        fpr, tpr, thresholds = roc_curve(true_values, probabilities)
+        auc = roc_auc_score(true_values, probabilities)
+
+        ax.plot(fpr, tpr, label=f'{epoch} AUC = {auc:0.4f}')
+
+    ax.plot(x, x, linestyle='--', label='Random AUC = 0.5')
+    plt.legend()
+    plt.savefig(f'{directory}/roc_auc_epoch_variation.png', dpi=600)
+    plt.clf()
+    plt.close()
+
+
+def plot_roc_auc_channels(predict_list, targ_list, channel_list):
+
+    # ECCConv combining roc curves for a variety of channel values
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.set_aspect('equal')
+
+    x = np.linspace(0, 1, 100)
+
+    for n in range(len(predict_list)):
+        predictions = predict_list[n]
+        targets = targ_list[n]
+        channel = channel_list[n]
+
+        true_values = targets[0].astype(int)
+        probabilities = predictions[0].astype(float)
+
+        fpr, tpr, thresholds = roc_curve(true_values, probabilities)
+        auc = roc_auc_score(true_values, probabilities)
+
+        ax.plot(fpr, tpr, label=f'{channel} AUC = {auc:0.4f}')
+
+    ax.plot(x, x, linestyle='--', label='Random AUC = 0.5')
+    plt.legend()
+    plt.savefig(f'{directory}/roc_auc_channels_variation.png', dpi=600)
+    plt.clf()
+    plt.close()
+
+
+p, t, e, be, c = [], [], [], [], []
 files = file_list()
+
+print(f'Plotting for {len(files)} files')
+
 for j in range(files.shape[0]):
     pickle_file = open(f'{directory}/{files[j,0]}', 'rb')
     data_info = pickle.load(pickle_file)
 
-    data_predictions = np.load(f'{directory}/{files[j,2]}')  # Predictions data
+    data_predictions = np.load(f'{directory}/{files[j,1]}')  # Predictions data
     predictions, targets = data_predictions['predictions'], data_predictions['targets']
 
-    data_training = np.load(f'{directory}/{files[j,3]}')  # History of learning data
+    p.append(predictions)
+    t.append(targets)
+    e.append(data_info['Epochs'])
+    be.append(data_info['Best Value Epoch'])
+    c.append(data_info['Channels'])
+
+    data_training = np.load(f'{directory}/{files[j,2]}')  # History of learning data
     loss_values, val_loss_values, accuracy_values, val_accuracy_values = data_training['loss_values'], \
                                                                          data_training['val_loss_values'], \
                                                                          data_training['accuracy_values'], \
                                                                          data_training['val_accuracy_values']
 
+    # Individual runs plotting
+
     plot_history(loss_values, val_loss_values, accuracy_values, val_accuracy_values,
                  int(data_info['Best Value Epoch']), data_info['t0'])
     plot_sig_back_hist(predictions, targets, data_info['t0'])
     plot_sig_back_cumulative(predictions, targets, data_info['t0'])
-    plot_roc_curve_plt(predictions, targets, data_info['t0'])
+    # plot_roc_curve_plt(predictions, targets, data_info['t0'])
     plot_sig_sqrt_back(predictions, targets, data_info['t0'])
     plot_roc_curve_skl(predictions, targets, data_info['t0'])
+
+# Combining all runs plotting
+
+# plot_roc_auc_epoch_variation(p, t, e, be)  # SMPL results
+plot_roc_auc_channels(p, t, c)  # ECCConv results
+
+print('Plotting Complete')
