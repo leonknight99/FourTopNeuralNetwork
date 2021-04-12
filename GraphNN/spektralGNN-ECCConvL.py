@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 import time
 import pickle
 
@@ -14,9 +13,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.metrics import categorical_accuracy, binary_accuracy, BinaryAccuracy
 from tensorflow.keras.optimizers import Adam
 
-from spektral.data import DisjointLoader, BatchLoader
-from spektral.transforms import NormalizeAdj
-from spektral.datasets import QM9
+from spektral.data import DisjointLoader
 from spektral.layers import GlobalAvgPool, ECCConv
 
 np.set_printoptions(linewidth=200)
@@ -28,8 +25,9 @@ np.set_printoptions(linewidth=200)
 learning_rate = 1e-3  # Learning rate
 epochs = 2000  # Number of training epochs
 batch_size = 32  # Batch size
-es_patience = 2  # Patience for early stopping
+es_patience = 20  # Patience for early stopping
 samples = 24000  # Number of graphs to add to the dataset
+channels = 256  # Number of channels in each layer of the ECCConv
 t0 = time.time()
 
 ################################################################################
@@ -67,10 +65,10 @@ X_in = Input(shape=(None,F), name="X_in")
 A_in = Input(shape=(None,), sparse=True, name="A_in")
 E_in = Input(shape=(None,S), name="E_in")
 I_in = Input(shape=(), name="segment_ids_in", dtype=tf.int32)
-channels = 16
-X_1 = MessagePassing.TopQuarkMP(aggregate='sum')([X_in, A_in, E_in])  # ECCConv(channels, activation='relu') MessagePassing.TopQuarkMP(aggregate='sum')
-X_2 = MessagePassing.TopQuarkMP(aggregate='sum')([X_1, A_in, E_in])
-X_3 = MessagePassing.TopQuarkMP(aggregate='sum')([X_2, A_in, E_in])
+
+X_1 = ECCConv(channels, activation='relu')([X_in, A_in, E_in])
+X_2 = ECCConv(channels, activation='relu')([X_1, A_in, E_in])
+X_3 = ECCConv(channels, activation='relu')([X_2, A_in, E_in])
 X_4 = GlobalAvgPool()([X_3, I_in])
 output = Dense(n_out, activation='sigmoid')(X_4)
 
@@ -92,6 +90,7 @@ filename_details = os.path.join(final_directory, f'{t0}GNNdetails.txt')  # Save 
 text_file_details = open(filename_details, 'wt')
 text_file_details.write(f'Learning Rate: {learning_rate} | Epochs: {epochs} | Batch Size: {batch_size} | '
                         f'Early Stopping Patience: {es_patience}\nNumber of Samples: {samples} | Channels: {channels}')
+text_file_details.close()
 
 ################################################################################
 # FIT MODEL
@@ -202,22 +201,15 @@ background = np.where(targets == 0)[1]
 signal_predictions = np.take(predictions, signal)
 background_predictions = np.take(predictions, background)
 
-plt.hist([signal_predictions, background_predictions], bins=100, stacked=True, label=['signal', 'background'])
-plt.legend()
-plt.xlabel('Prediction Value')
-plt.ylabel('N')
-plt.title('The distribution of prediction between \n 0 for background and 1 for signal')
-plt.show()
-
 # Saving for later processing
 
 filename_predictions = os.path.join(final_directory, f'{t0}Predictions')
 np.savez(filename_predictions, predictions=predictions, targets=targets)  # Predictions and targets
 
-filename_dictionary = os.path.join(final_directory, f'{t0}GNNdictionary.pkl')
+filename_dictionary = os.path.join(final_directory, f'{t0}GNNdictionary.pkl')  # Details about the model
 dictionary = {"Learning Rate": learning_rate, "Epochs": epochs, "Batch Size": batch_size,
               "Early Stopping Patience": es_patience, 'Samples': samples, "Best Value Epoch": best_val_epoch,
-              "Test Loss": test_loss, "Test Accuracy": test_acc, "t0": t0}  # Details about the model
+              "Test Loss": test_loss, "Test Accuracy": test_acc, "t0": t0, "Channels": channels}
 with open(filename_dictionary, 'wb') as text_file_dict:
     pickle.dump(dictionary, text_file_dict, protocol=0)
 
@@ -226,26 +218,5 @@ np.savez(filename_training, loss_values=loss_values, val_loss_values=val_loss_va
          accuracy_values=accuracy_values, val_accuracy_values=val_accuracy_values)
 
 print("Done. Test loss: {:.4f}. Test acc: {:.2f}".format(test_loss, test_acc))
-
-fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-
-epoch_list = range(1, epoch + 1)
-
-axs[0].plot(epoch_list, loss_values, 'c', label='Training loss')
-axs[0].plot(epoch_list, val_loss_values, 'b', label='Validation loss')
-axs[0].axvline(x=best_val_epoch, label='Best validation loss epoch', c='r')
-axs[0].title.set_text(f'Training and validation loss')
-axs[0].legend()
-
-axs[1].plot(epoch_list, accuracy_values, 'c', label='Training accuracy')
-axs[1].plot(epoch_list, val_accuracy_values, 'b', label='Validation accuracy')
-axs[1].axvline(x=best_val_epoch, label='Best validation loss epoch', c='r')
-axs[1].title.set_text(f'Training and validation accuracy')
-axs[1].legend()
-
-for ax in axs.flat:
-    ax.set(xlabel='Epochs', ylabel='Loss')
-plt.show()
-plt.clf()
 
 print(f'Finished GNN: \nTime taken: {round(time.time() - t0, 5)}s')
