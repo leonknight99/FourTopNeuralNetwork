@@ -1,13 +1,26 @@
 import os
 import pickle
 import numpy as np
+import math
 import matplotlib.pyplot as plt
-import scikitplot
-import sklearn
 from sklearn.metrics import roc_auc_score, roc_curve
 
 np.set_printoptions(linewidth=200)
 directory = os.path.join(os.getcwd(), 'GNNout')
+
+
+def smooth_function(y, width):
+    if width % 2 == 0:
+        print('Enter odd value for width of smoothing')
+        return
+    smooth = np.zeros_like(y)
+    pm = math.floor(width / 2)
+    for val in range(pm, len(y) - 1):
+        smooth[val] = np.average(y[val-pm:val+pm+1])
+    for val in range(0, pm):
+        smooth[val] = y[val]
+        smooth[len(y) - val - 1] = y[len(y) - val - 1]
+    return smooth
 
 
 def file_list():
@@ -39,13 +52,13 @@ def plot_history(loss_values, val_loss_values, accuracy_values, val_accuracy_val
     axs[0].plot(epoch_list, val_loss_values, 'b', label='Validation loss')
     axs[0].axvline(x=best_val_epoch, label='Best validation loss epoch', c='r')
     axs[0].title.set_text(f'Training and validation loss')
-    axs[0].legend()
+    axs[0].legend(prop={'size': 6})
 
     axs[1].plot(epoch_list, accuracy_values, 'c', label='Training accuracy')
     axs[1].plot(epoch_list, val_accuracy_values, 'b', label='Validation accuracy')
     axs[1].axvline(x=best_val_epoch, label='Best validation loss epoch', c='r')
     axs[1].title.set_text(f'Training and validation accuracy')
-    axs[1].legend()
+    axs[1].legend(prop={'size': 6})
 
     for ax in axs.flat:
         ax.minorticks_on()
@@ -57,13 +70,16 @@ def plot_history(loss_values, val_loss_values, accuracy_values, val_accuracy_val
 
     fig, ax = plt.subplots(figsize=(5, 5))
 
+    smooth = smooth_function(np.log(val_loss_values), 5)
+
     ax.plot(epoch_list, np.log(loss_values), 'c', label='Training data loss')
     ax.plot(epoch_list, np.log(val_loss_values), 'b', label='Validation data loss')
-    ax.axvline(x=best_val_epoch, label='Best epoch', c='r')
+    ax.plot(epoch_list, smooth, '--', label='Validation data "smoothed" over 5 epochs')
+    ax.axvline(x=best_val_epoch, label='Best epoch', c='r', linewidth=0.5)
     ax.minorticks_on()
     ax.set_xlabel('Epochs')
     ax.set_ylabel(r'$\ln({loss})$')
-    plt.legend()
+    plt.legend(prop={'size': 6})
 
     plt.savefig(f'{directory}/{data_number}loss_history.png', dpi=600)
     plt.clf()
@@ -80,7 +96,7 @@ def plot_sig_back_hist(predictions, targets, data_number):
     background_predictions = np.take(predictions, background)  # List of prob for background
 
     plt.hist([signal_predictions, background_predictions], bins=100, stacked=True, label=['Signal', 'Background'])
-    plt.legend()
+    plt.legend(prop={'size': 6})
     plt.xlabel('Prediction Value')
     plt.ylabel('N')
     plt.title('The distribution of prediction between \n 0 for background and 1 for signal')
@@ -109,7 +125,7 @@ def plot_sig_back_cumulative(predictions, targets, data_number):
     n, bins, patches = ax.hist(background_predictions, bins=bins, density=True, histtype='step', cumulative=-1, label='Background' )
     patches[0].set_xy(patches[0].get_xy()[1:])
     ax.minorticks_on()
-    ax.legend()
+    ax.legend(prop={'size': 6})
     ax.set_xlabel('Probability events are classed as signal')
     ax.set_ylabel('Cumulative sum of events')
 
@@ -133,12 +149,17 @@ def plot_sig_sqrt_back(predictions, targets, data_number):
         sig = n_signal / np.sqrt(n_background)
         sb_list.append(sig)
 
+    max_significance = max(sb_list)
+    max_threshold = thresholds[sb_list.index(max_significance)]
+
     fig, ax = plt.subplots(figsize=(5, 5))
-    ax.plot(thresholds, sb_list)
+    ax.plot(thresholds, sb_list, label='Significance')
+    ax.plot(max_threshold, max_significance, '.', color='r', label=f'Maximum ({max_threshold:0.2f} , {max_significance:0.2f})')
     ax.minorticks_on()
     ax.set_xlabel('Threshold')
     ax.set_ylabel(r'$s/\sqrt{b}$')
 
+    plt.legend(prop={'size': 6})
     plt.savefig(f'{directory}/{data_number}sig_sqrt_back.png', dpi=600)
     plt.clf()
     plt.close()
@@ -193,7 +214,7 @@ def plot_roc_curve_skl(predictions, targets, data_number):
     ax.minorticks_on()
     ax.set_xlabel('False Positive Rate')
     ax.set_ylabel('True Positive Rate')
-    plt.legend()
+    plt.legend(prop={'size': 6})
     plt.savefig(f'{directory}/{data_number}roc_curve_skl.png', dpi=600)
     plt.clf()
     plt.close()
@@ -226,7 +247,10 @@ def plot_roc_auc_epoch_variation(predict_list, targ_list, epoch_list, best_epoch
         ax.plot(fpr, tpr, label=f'{epoch} AUC = {auc:0.4f}')
 
     ax.plot(x, x, linestyle='--', label='Random AUC = 0.5')
-    plt.legend()
+    ax.minorticks_on()
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    plt.legend(prop={'size': 6})
     plt.savefig(f'{directory}/roc_auc_epoch_variation.png', dpi=600)
     plt.clf()
     plt.close()
@@ -255,7 +279,10 @@ def plot_roc_auc_channels(predict_list, targ_list, channel_list):
         ax.plot(fpr, tpr, label=f'{channel} AUC = {auc:0.4f}')
 
     ax.plot(x, x, linestyle='--', label='Random AUC = 0.5')
-    plt.legend()
+    ax.minorticks_on()
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    plt.legend(prop={'size': 6})
     plt.savefig(f'{directory}/roc_auc_channels_variation.png', dpi=600)
     plt.clf()
     plt.close()
@@ -276,9 +303,10 @@ for j in range(files.shape[0]):
     p.append(predictions)
     t.append(targets)
     e.append(data_info['Epochs'])
-    be.append(data_info['Best Value Epoch'])
-    c.append(data_info['Channels'])
-
+    #be.append(data_info['Best Value Epoch'])
+    #c.append(data_info['Channels'])  # For ECCConvL
+    c.append(data_info['Dimension Removed'])
+    be.append(data_info['Dimension Removed'])
     data_training = np.load(f'{directory}/{files[j,2]}')  # History of learning data
     loss_values, val_loss_values, accuracy_values, val_accuracy_values = data_training['loss_values'], \
                                                                          data_training['val_loss_values'], \
@@ -297,7 +325,7 @@ for j in range(files.shape[0]):
 
 # Combining all runs plotting
 
-# plot_roc_auc_epoch_variation(p, t, e, be)  # SMPL results
-plot_roc_auc_channels(p, t, c)  # ECCConv results
+plot_roc_auc_epoch_variation(p, t, e, be)  # SMPL results
+#plot_roc_auc_channels(p, t, c)  # ECCConv results
 
 print('Plotting Complete')

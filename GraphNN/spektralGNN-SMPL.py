@@ -27,6 +27,7 @@ epochs = 2000  # Number of training epochs
 batch_size = 32  # Batch size
 es_patience = 20  # Patience for early stopping
 samples = 24000  # Number of graphs to add to the dataset
+dim = 5
 t0 = time.time()
 
 ################################################################################
@@ -88,7 +89,8 @@ text_file_model.close()
 filename_details = os.path.join(final_directory, f'{t0}GNNdetails.txt')  # Save hyperparameters as a txt file
 text_file_details = open(filename_details, 'wt')
 text_file_details.write(f'Learning Rate: {learning_rate} | Epochs: {epochs} | Batch Size: {batch_size} | '
-                        f'Early Stopping Patience: {es_patience}\nNumber of Samples: {samples} | Channels: {channels}')
+                        f'Early Stopping Patience: {es_patience}\nNumber of Samples: {samples} | Channels: {channels}'
+                        f' | Dimension Removed: {dim}')
 text_file_details.close()
 
 ################################################################################
@@ -208,7 +210,8 @@ np.savez(filename_predictions, predictions=predictions, targets=targets)  # Pred
 filename_dictionary = os.path.join(final_directory, f'{t0}GNNdictionary.pkl')
 dictionary = {"Learning Rate": learning_rate, "Epochs": epochs, "Batch Size": batch_size,
               "Early Stopping Patience": es_patience, 'Samples': samples, "Best Value Epoch": best_val_epoch,
-              "Test Loss": test_loss, "Test Accuracy": test_acc, "t0": t0}  # Details about the model
+              "Test Loss": test_loss, "Test Accuracy": test_acc, "t0": t0,
+              "Dimension Removed": dim}  # Details about the model
 with open(filename_dictionary, 'wb') as text_file_dict:
     pickle.dump(dictionary, text_file_dict, protocol=0)
 
