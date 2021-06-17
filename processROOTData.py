@@ -10,6 +10,8 @@ from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collect
 from PhysicsTools.NanoAODTools.postprocessing.framework.eventloop import Module
 from PhysicsTools.NanoAODTools.postprocessing.tools import deltaR
 
+# Python 2.7 code
+
 # https://github.com/cms-nanoAOD/nanoAOD-tools/blob/master/python/postprocessing/modules/common/collectionMerger.py
 # said to do it
 _rootLeafType2rootBranchType = {'UChar_t': 'b', 'Char_t': 'B', 'UInt_t': 'i', 'Int_t': 'I', 'Float_t': 'F',
@@ -18,25 +20,29 @@ _rootLeafType2rootBranchType = {'UChar_t': 'b', 'Char_t': 'B', 'UInt_t': 'i', 'I
 
 class ExampleAnalysis(Module):
     def __init__(self, b, mn, mx, mc):
+
         self.writeHistFile = True
         self.nbins = b
-        self.max_bin = mx
+        self.max_bin = mx  # Output histogram parameters
         self.min_bin = mn
         self.max_count = mc
-        self.counter = 0
+
+        self.counter = 0  # For testing code
 
         self.input = {"typeElectron": "Electron", "typeMuon": "Muon", "typeAK4": "Jet", "typeAK8": "FatJet"}
         self.output = {"typeElectron": "SelectedElectron", "typeMuon": "SelectedMuon",
-                       "typeAK4": "SelectedJet", "typeAK8": "SelectedFatJet"}
+                       "typeAK4": "SelectedJet", "typeAK8": "SelectedFatJet"}  # Selected objects in the event
         self.n_inputs = len(self.input)
 
         placeholder = []
         for elem in self.output:
             placeholder.append({})
-        self.branchType = dict(zip(self.input.values(), placeholder))
+        self.branchType = dict(zip(self.input.values(), placeholder))  # Dictionary of objects properties
 
     def beginJob(self, histFile=None, histDirName=None):
         Module.beginJob(self, histFile, histDirName)
+
+        # Initialising histograms for output
 
         self.h_vpt = ROOT.TH1F('Pt of SL', 'Transverse Momentum of the Single Lepton Events',
                                self.nbins, self.min_bin, self.max_bin)
@@ -64,7 +70,6 @@ class ExampleAnalysis(Module):
             self.brlist_sep[key] = self.filterBranchNames(branches, self.input[key])
 
         self.out = wrappedOutputTree
-        #print self.brlist_sep["typeElectron"]
         for ebr in self.brlist_sep["typeElectron"]:
             self.out.branch("%s_%s"%(self.output["typeElectron"], ebr),
                             _rootLeafType2rootBranchType[self.branchType[self.input["typeElectron"]][ebr]],
@@ -85,7 +90,7 @@ class ExampleAnalysis(Module):
                             _rootLeafType2rootBranchType[self.branchType[self.input["typeAK8"]][j8br]],
                             lenVar="n%s"%self.output["typeAK8"])
 
-        '''f = open("branch list.txt", "a")
+        '''f = open("branch list.txt", "a")  # Produced a txt file of all the branches present in the root files
         for i in xrange(self.branchlist.GetEntries()):
             f.write('\n\n' + str(self.branchlist.At(i)))
             print 'Branch list: ', self.branchlist.At(i)
@@ -93,7 +98,6 @@ class ExampleAnalysis(Module):
         f.close()'''
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
-        #print 'End: \n', wrappedOutputTree.GetListOfBranches().GetEntries()
         pass
 
     def filterBranchNames(self, branches, collection):
@@ -107,7 +111,7 @@ class ExampleAnalysis(Module):
         return out
 
     def analyze(self, event):
-        self.counter += 1
+        self.counter += 1  # Counter used for testing
         #if self.counter > self.max_count:
          #   return False
         #else:
@@ -115,7 +119,7 @@ class ExampleAnalysis(Module):
 
         electrons = Collection(event, "Electron")
         muons = Collection(event, "Muon")
-        jets = Collection(event, "Jet")  # Collections
+        jets = Collection(event, "Jet")  # Collections of objects and their properties in the event
         fatjets = Collection(event, "FatJet")
 
         eventSumMuons = ROOT.TLorentzVector()
@@ -183,8 +187,8 @@ class ExampleAnalysis(Module):
 
         '''Jets'''
 
-        HT = 0.0
-        n_BJets = 0
+        HT = 0.0  # Total transverse momentum of the jets
+        n_BJets = 0  # Number of b-jets
 
         for jet_i, jet in enumerate(jets):
             if jet.pt <= 30:  # Transverse momentum cut per jet
@@ -257,7 +261,7 @@ class ExampleAnalysis(Module):
 
         for br in self.brlist_sep["typeAK8"]:
             out = []
-            for elem in range(len(fatjets)):
+            for elem in range(len(fatjets)):  # Type AK8 Jets 'fat jets' that have been detected
                 out.append(getattr(fatjets[elem], br))
             self.out.fillBranch("%s_%s"%(self.output["typeAK8"], br), out)
         return True
