@@ -8,8 +8,16 @@ from sklearn.metrics import roc_auc_score, roc_curve
 np.set_printoptions(linewidth=200)
 directory = os.path.join(os.getcwd(), 'GNNout')
 
+'''
+    This python file is for plotting graphs from the results of the graph neural networks 
+    Note: some of the input lists will need to be either added in or commented out depending on the type of GNN used 
+'''
+
 
 def smooth_function(y, width):
+
+    # To make the graph smoother by averaging over neighbouring elements
+
     if width % 2 == 0:
         print('Enter odd value for width of smoothing')
         return
