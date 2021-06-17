@@ -5,7 +5,6 @@ import time
 import pickle
 
 import spektralDataset
-from Layers import MessagePassing
 
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.losses import MeanSquaredError, BinaryCrossentropy, CategoricalCrossentropy
@@ -62,21 +61,22 @@ print(f'Time taken: {round(time.time() - t0, 5)}s | Loaders complete')
 ################################################################################
 # BUILD MODEL
 ################################################################################
-X_in = Input(shape=(None,F), name="X_in")
+
+X_in = Input(shape=(None,F), name="X_in")  # Input layers to the GNN
 A_in = Input(shape=(None,), sparse=True, name="A_in")
 E_in = Input(shape=(None,S), name="E_in")
 I_in = Input(shape=(), name="segment_ids_in", dtype=tf.int32)
 
-X_1 = ECCConv(channels, activation='relu')([X_in, A_in, E_in])
-X_2 = ECCConv(channels, activation='relu')([X_1, A_in, E_in])
-X_3 = ECCConv(channels, activation='relu')([X_2, A_in, E_in])
-X_4 = GlobalAvgPool()([X_3, I_in])
-output = Dense(n_out, activation='sigmoid')(X_4)
+X_1 = ECCConv(channels, activation='relu')([X_in, A_in, E_in])  # GNN layer 1
+X_2 = ECCConv(channels, activation='relu')([X_1, A_in, E_in])  # GNN layer 2
+X_3 = ECCConv(channels, activation='relu')([X_2, A_in, E_in])  # GNN layer 3
+X_4 = GlobalAvgPool()([X_3, I_in])  # Pooling layer
+output = Dense(n_out, activation='sigmoid')(X_4)  # Fully connected output layer
 
 # Build model
 model = Model(inputs=[X_in, A_in, E_in, I_in], outputs=output)
-opt = Adam(lr=learning_rate)
-loss_fn = BinaryCrossentropy()
+opt = Adam(lr=learning_rate)  # Learning optimiser
+loss_fn = BinaryCrossentropy()  # Loss function
 
 # Saving the model summary for later use
 model.summary()
@@ -101,11 +101,11 @@ text_file_details.close()
 loss_values, val_loss_values, accuracy_values, val_accuracy_values = [], [], [], []
 
 
-@tf.function(input_signature=loader_tr.tf_signature(), experimental_relax_shapes=True)
-def train_step(inputs, target):
+@tf.function(input_signature=loader_tr.tf_signature(), experimental_relax_shapes=True)  # Decorator: speeds up code
+def train_step(inputs, target):  # Training the GNN
     with tf.GradientTape() as tape:
         predictions = model(inputs, training=True)
-        loss = loss_fn(target, predictions)
+        loss = loss_fn(target, predictions)  # Evaluates GNN performance on training data
         loss += sum(model.losses)
     gradients = tape.gradient(loss, model.trainable_variables)
     opt.apply_gradients(zip(gradients, model.trainable_variables))
@@ -113,7 +113,7 @@ def train_step(inputs, target):
     return loss, acc
 
 
-def test_step(loader):
+def test_step(loader):  # Testing the model with the validation or testing data
     prediction_list, target_list = [], []
     step = 0
     while step < loader.steps_per_epoch:
@@ -130,7 +130,7 @@ def test_step(loader):
     return y_reco, y_true
 
 
-def evaluate(loader):
+def evaluate(loader):  # Evaluates the performance of the final model
     output_l = []
     step = 0
     while step < loader.steps_per_epoch:
@@ -191,10 +191,8 @@ for batch in loader_tr:
 
 print("Testing model")
 model.set_weights(best_weights)  # Load best model
-test_loss, test_acc = evaluate(loader_te)
-test_pre, test_target = test_step(loader_te)
-print(test_pre)
-print(test_target)
+test_loss, test_acc = evaluate(loader_te)  # Evaluating the final GNN
+test_pre, test_target = test_step(loader_te)  # Predictions and targets used for results
 
 predictions = test_pre.T
 targets = test_target.T
@@ -203,7 +201,7 @@ background = np.where(targets == 0)[1]
 signal_predictions = np.take(predictions, signal)
 background_predictions = np.take(predictions, background)
 
-# Saving for later processing
+# Saving for later graphing
 
 filename_predictions = os.path.join(final_directory, f'{t0}Predictions')
 np.savez(filename_predictions, predictions=predictions, targets=targets)  # Predictions and targets
