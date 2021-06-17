@@ -6,6 +6,11 @@ from spektral.data import Dataset, Graph
 from spektral.transforms.adj_to_sp_tensor import AdjToSpTensor
 from spektral.transforms.normalize_adj import NormalizeAdj
 
+'''
+    Loads the individual numpy files to convert the numpy graph arrays to the 'Graph' object present in the 
+    Spektral library
+'''
+
 
 class TopDataset(Dataset):
 
@@ -60,18 +65,3 @@ class TopDataset(Dataset):
         # We must return a list of Graph objects
         return [make_graph(n) for n in range(n_samples)]
 
-'''
-file = ['root2networkOut/0 graphs.npz']#, 'root2networkOut/1 graphs.npz']
-dataset = TopDataset(max_samples=0, file_name_list=file)
-print(dataset)
-
-for n in [0, 1]:#, 10, 15]:
-    print(dataset[n])
-    print(dataset[n].a)
-    print(dataset[n].x)
-    print(dataset[n].e)
-    print(dataset[n].y)
-    print(dataset[n].a.shape, dataset[n].a.nnz)
-    print(dataset[n].x.shape)
-    print(dataset[n].e.shape)
-'''
