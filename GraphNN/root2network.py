@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.sparse as sp
 import matplotlib.pyplot as plt
 import uproot
 import networkx as nx
@@ -28,10 +27,9 @@ def data_to_graph(inputDir, outputDir, type, exampleGraph=False):
     for inputFile in inputFiles_list:
 
         file = uproot.open(str(inputFile))
-        eventsTree = file["Events"]  # Grabs the events tree from the root Tfile
+        eventsTree = file["Events"]  # Grabs the events tree from the root TFile
 
         eventsTreeDict = eventsTree.arrays(library="np")  # Event tree as a numpy array and python dictionary
-        #  print(len(eventsTreeDict["event"]))
 
         nEvents = len(eventsTreeDict["event"])  # Number of events selected
         nElectron_list, nMuon_list, nJet_list = eventsTreeDict["nSelectedElectron"], eventsTreeDict["nSelectedMuon"], \
@@ -114,17 +112,12 @@ def data_to_graph(inputDir, outputDir, type, exampleGraph=False):
             edge_list = edge_triu.ravel()
             edge_list = edge_list[edge_list != 0]  # For edge features
 
-            a = nx.convert_matrix.to_numpy_matrix(G)
-            x = np.array(node_features_array)
-            e = np.array([edge_list]).T
-            #print(e)
-            #e1 = nx.attr_sparse_matrix(G, edge_attr='d', rc_order=G.nodes)
-            #print(e1)
-            #  E = e.todense() # To turn back into an adjacency matrix for edge values
-            y = G.graph.get('event')
+            a = nx.convert_matrix.to_numpy_matrix(G)  # Adjacency
+            x = np.array(node_features_array)  # Node features
+            e = np.array([edge_list]).T  # Edge features
+            y = G.graph.get('event')  # Graph labels
 
-            if np.count_nonzero(a) != e.shape[0]:
-                #print('Graph Error\n', edge_features_matrix)
+            if np.count_nonzero(a) != e.shape[0]:  # Error checking
                 g_err += 1
                 continue
 
@@ -140,7 +133,6 @@ def data_to_graph(inputDir, outputDir, type, exampleGraph=False):
                     nParticles = nJet + nMuon + nElectron
                     pos = nx.spring_layout(G, iterations=nParticles)
                 nx.draw(G, with_labels=True)
-                #  nx.draw_networkx_labels(G, pos, font_size=20)
                 plt.show()
 
         print(f'Processed: {inputFile} | {nFx} / {nF} | Time: {round(time.time() - t0, 5)}s | Events: {len(y_list)}')  # Timings
